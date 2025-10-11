@@ -1,0 +1,18 @@
+# 가상환경 폴더 무시
+venv/
+
+# 파이썬 캐시 파일 무시
+__pycache__/
+
+# DB , 임시 저장 파일 무시
+*.sqlite
+*.db
+*.faiss
+
+#Docker 빌드 캐시나 로그 무시
+*.log
+*.pyc
+
+# OS 자동 생성 파일 무시(윈도우, 맥)
+.DS_Store
+Thumbs.db
