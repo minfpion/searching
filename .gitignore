@@ -12,6 +12,7 @@ __pycache__/
 #Docker 빌드 캐시나 로그 무시
 *.log
 *.pyc
+*.pyo
 
 # OS 자동 생성 파일 무시(윈도우, 맥)
 .DS_Store
