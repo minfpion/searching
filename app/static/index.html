@@ -215,44 +215,71 @@
         
         .modal-content {
             background-color: white;
-            margin: 5% auto;
+            margin: 2% auto;
             padding: 20px;
             border-radius: 8px;
-            max-width: 800px;
-            width: 90%;
+            max-width: 80%;
+            width: 1000px;
             position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
         }
         
         .video-container {
             position: relative;
             width: 100%;
             margin: 20px 0;
+            aspect-ratio: 16 / 9;
+            max-height: 60vh;
+            background: #000;
         }
         
         .video-player {
             width: 100%;
-            max-height: 500px;
+            height: 100%;
             background: #000;
         }
         
         .time-controls {
-            margin-top: 10px;
+            margin-top: 15px;
             display: flex;
-            gap: 10px;
+            gap: 15px;
             align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
         }
         
         .time-controls button {
-            padding: 5px 10px;
+            padding: 8px 15px;
             background: #007bff;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
         
         .time-controls button:hover {
             background: #0056b3;
+        }
+        
+        .time-controls button.active {
+            background: #28a745;
+        }
+        
+        .time-controls button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .time-display {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin: 0 10px;
         }
     </style>
 </head>
@@ -270,9 +297,17 @@
                 </video>
             </div>
             <div class="time-controls">
+                <button id="playPauseBtn" onclick="togglePlayPause()">
+                    <span id="playPauseIcon">⏸</span>
+                    <span id="playPauseText">일시정지</span>
+                </button>
                 <button onclick="jumpToFrame()">프레임 위치로 이동</button>
-                <button onclick="seekBackward()">-5초</button>
-                <button onclick="seekForward()">+5초</button>
+                <button onclick="restartFromFrame()">프레임부터 다시 재생</button>
+                <button onclick="seekBackward()">◀ 5초</button>
+                <button onclick="seekForward()">5초 ▶</button>
+                <span class="time-display">
+                    <span id="currentTime">0:00</span> / <span id="totalTime">0:00</span>
+                </span>
             </div>
         </div>
     </div>
@@ -543,6 +578,49 @@
         // 현재 선택된 프레임 정보를 저장할 변수
         let currentFrameIndex = 0;
         
+        // 시간을 형식화하는 함수
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+        
+        // 비디오 시간 업데이트
+        function updateTimeDisplay() {
+            const videoPlayer = document.getElementById('videoPlayer');
+            const currentTime = document.getElementById('currentTime');
+            const totalTime = document.getElementById('totalTime');
+            
+            currentTime.textContent = formatTime(videoPlayer.currentTime);
+            totalTime.textContent = formatTime(videoPlayer.duration);
+        }
+        
+        // 재생/일시정지 토글
+        function togglePlayPause() {
+            const videoPlayer = document.getElementById('videoPlayer');
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            const playPauseIcon = document.getElementById('playPauseIcon');
+            const playPauseText = document.getElementById('playPauseText');
+            
+            if (videoPlayer.paused) {
+                videoPlayer.play();
+                playPauseIcon.textContent = '⏸';
+                playPauseText.textContent = '일시정지';
+            } else {
+                videoPlayer.pause();
+                playPauseIcon.textContent = '▶';
+                playPauseText.textContent = '재생';
+            }
+        }
+        
+        // 프레임부터 다시 재생
+        function restartFromFrame() {
+            const videoPlayer = document.getElementById('videoPlayer');
+            videoPlayer.currentTime = currentFrameIndex;
+            videoPlayer.play()
+                .catch(e => console.log("재생 실패:", e));
+        }
+        
         // 모달 관련 함수들
         function showFrameInfo(frameIndex, videoName) {
             const modal = document.getElementById('frameModal');
@@ -567,14 +645,24 @@
                 <p><strong>영상 시간:</strong> ${timeStr}</p>
             `;
             
-            // 비디오 소스 설정
+            // 비디오 소스 설정 및 재생
             videoSource.src = `/video/stream/${videoName}`;
             videoPlayer.load();
             
-            // 비디오가 로드되면 해당 시간으로 이동
-            videoPlayer.onloadedmetadata = function() {
+            // 비디오 이벤트 리스너 설정
+            videoPlayer.onloadeddata = function() {
                 videoPlayer.currentTime = frameIndex;
+                updateTimeDisplay();
+                
+                // 처음 로드될 때만 자동 재생
+                if (!videoPlayer.hasAttribute('data-loaded')) {
+                    videoPlayer.play()
+                        .catch(e => console.log("자동 재생 실패:", e));
+                    videoPlayer.setAttribute('data-loaded', 'true');
+                }
             };
+            
+            videoPlayer.ontimeupdate = updateTimeDisplay;
             
             modal.style.display = 'block';
         }
@@ -582,13 +670,40 @@
         function closeModal() {
             const modal = document.getElementById('frameModal');
             const videoPlayer = document.getElementById('videoPlayer');
+            const videoSource = document.getElementById('videoSource');
+            
+            // 비디오 정지 및 초기화
             videoPlayer.pause();
+            videoSource.src = '';
+            videoPlayer.load();
+            videoPlayer.removeAttribute('data-loaded');
+            
+            // 모달 닫기
             modal.style.display = 'none';
         }
         
         // 비디오 컨트롤 함수들
         function jumpToFrame() {
             const videoPlayer = document.getElementById('videoPlayer');
+            const playPauseIcon = document.getElementById('playPauseIcon');
+            const playPauseText = document.getElementById('playPauseText');
+            
+            // 먼저 일시정지
+            videoPlayer.pause();
+            
+            // 시간 이동 후의 동작을 처리하는 이벤트 리스너 추가
+            const seekedHandler = function() {
+                videoPlayer.pause();
+                playPauseIcon.textContent = '▶';
+                playPauseText.textContent = '재생';
+                // 이벤트 리스너 제거 (한 번만 실행)
+                videoPlayer.removeEventListener('seeked', seekedHandler);
+            };
+            
+            // seeked 이벤트 리스너 추가
+            videoPlayer.addEventListener('seeked', seekedHandler);
+            
+            // 프레임 위치로 이동
             videoPlayer.currentTime = currentFrameIndex;
         }
         

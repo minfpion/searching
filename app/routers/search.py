@@ -82,9 +82,11 @@ async def search_similar_frames(file: UploadFile = File(...)):
         # 4. 검색 결과를 사용자가 보기 좋게 정리합니다.
         results = []
         for i, idx in enumerate(indices):
+            # DB에 저장된 video_name은 이미 전체 파일명을 포함
+            video_filename = vnames[idx]
             results.append({
                 "rank": i + 1,
-                "video_name": vnames[idx],  # DB에서 가져온 실제 비디오 이름 사용
+                "video_name": video_filename,
                 "frame_index": int(findices[idx]),
                 "similarity_score": float(1 - distances[i])
             })

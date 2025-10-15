@@ -36,4 +36,3 @@ def search_similar(index, query_vector: np.ndarray, top_k: int = 5):
     query_vector = np.array([query_vector]).astype('float32')
     distances, indices = index.search(query_vector, top_k)
     return distances[0], indices[0]
-docker stop $(docker ps -q)

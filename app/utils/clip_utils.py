@@ -17,7 +17,7 @@ model_name = "openai/clip-vit-base-patch32"
 # CLIP 모델 객체
 CLIP_MODEL = CLIPModel.from_pretrained(model_name).to(device)
 # CLIP 모델이 요구하는 형태로 이미지를 변환해주는 전처리기(Processor)
-CLIP_PROCESSOR = CLIPProcessor.from_pretrained(model_name)
+CLIP_PROCESSOR = CLIPProcessor.from_pretrained(model_name, use_fast=True)
 
 
 def image_to_clip_embedding(image_or_path) -> np.ndarray:

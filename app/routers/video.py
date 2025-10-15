@@ -29,19 +29,9 @@ async def process_video(file: UploadFile = File(...)) -> Dict:
 
     try:
         try:
-            # 원본 파일 이름 사용
-            base_name = os.path.splitext(file.filename)[0]
-            ext = os.path.splitext(file.filename)[1]
-            
-            # 같은 이름의 폴더가 있는지 확인하고 번호 부여
-            counter = 1
-            video_name = base_name
-            while os.path.exists(os.path.join(FRAME_FOLDER, video_name)):
-                video_name = f"{base_name}_{counter}"
-                counter += 1
-            
-            # 비디오 파일 경로 설정 (videos 폴더 안에 저장)
-            video_filename = f"{video_name}{ext}"
+            # 원본 파일 이름 그대로 사용
+            video_filename = file.filename
+            video_name = os.path.splitext(video_filename)[0]
             video_path = os.path.join(VIDEOS_FOLDER, video_filename)
             content = await file.read()
 

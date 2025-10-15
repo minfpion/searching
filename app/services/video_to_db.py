@@ -73,8 +73,8 @@ def process_video_to_db(video_file: str, frame_folder: str, db_name: str, table_
     추출된 프레임을 CLIP 임베딩으로 변환하고 DB에 저장합니다.
     """
     
-    # 비디오 이름을 가져와서 해당 비디오의 프레임 폴더 경로 생성
-    video_name_only = os.path.splitext(os.path.basename(video_file))[0]
+    # 비디오 파일명 전체를 사용 (확장자 포함)
+    video_name = os.path.basename(video_file)
     video_frame_folder = os.path.join(frame_folder, "test")  # test 폴더 안에 프레임이 저장됨
     
     frame_files = sorted([f for f in os.listdir(video_frame_folder) if f.endswith(('.jpg', '.png'))])
@@ -95,7 +95,7 @@ def process_video_to_db(video_file: str, frame_folder: str, db_name: str, table_
         embedding = image_to_clip_embedding(full_path)
         
         if embedding is not None:
-            save_embedding_to_db(db_name, table_name, video_name_only, frame_index, embedding)
+            save_embedding_to_db(db_name, table_name, video_name, frame_index, embedding)
 
 
 # -----------------------------------------------------------
