@@ -17,3 +17,12 @@ __pycache__/
 # OS 자동 생성 파일 무시(윈도우, 맥)
 .DS_Store
 Thumbs.db
+
+# IDE 설정 파일 무시
+.vscode/
+.idea/
+
+# test_output 폴더 무시
+test_frames/
+test.mp4
+*.sqlite

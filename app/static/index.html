@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>비디오 프레임 검색 시스템</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status-bar {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .upload-area.dragover {
+            background-color: #e3f2fd;
+            border-color: #2196f3;
+        }
+        .preview {
+            max-width: 300px;
+            margin-top: 10px;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .error {
+            color: #dc3545;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8d7da;
+            border-radius: 4px;
+        }
+        .success {
+            color: #28a745;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #d4edda;
+            border-radius: 4px;
+        }
+        .search-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+        .search-btn {
+            width: 200px;
+            margin-top: 10px;
+            background-color: #28a745;
+        }
+        .search-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .search-btn:not(:disabled):hover {
+            background-color: #218838;
+        }
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .result-item {
+            background-color: white;
+            padding: 15px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .result-item:hover {
+            transform: translateY(-2px);
+        }
+        .result-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        .similarity-score {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #28a745;
+        }
+        .metadata {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            cursor: pointer;
+            color: #495057;
+        }
+        .tab:hover {
+            color: #007bff;
+        }
+        .tab.active {
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .progress-container {
+            margin-top: 10px;
+            display: none;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress {
+            width: 0%;
+            height: 100%;
+            background-color: #007bff;
+            transition: width 0.3s;
+        }
+        
+        /* 모달 스타일 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 500px;
+            position: relative;
+        }
+        
+        .close-modal {
+            position: absolute;
+            right: 15px;
+            top: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .close-modal:hover {
+            color: #000;
+        }
+        
+        .frame-info {
+            margin-top: 15px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 800px;
+            width: 90%;
+            position: relative;
+        }
+        
+        .video-container {
+            position: relative;
+            width: 100%;
+            margin: 20px 0;
+        }
+        
+        .video-player {
+            width: 100%;
+            max-height: 500px;
+            background: #000;
+        }
+        
+        .time-controls {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .time-controls button {
+            padding: 5px 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .time-controls button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <!-- 프레임 정보 모달 -->
+    <div id="frameModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h3>비디오 플레이어</h3>
+            <div id="frameInfo" class="frame-info"></div>
+            <div class="video-container">
+                <video id="videoPlayer" class="video-player" controls>
+                    <source id="videoSource" src="" type="video/mp4">
+                    브라우저가 비디오 재생을 지원하지 않습니다.
+                </video>
+            </div>
+            <div class="time-controls">
+                <button onclick="jumpToFrame()">프레임 위치로 이동</button>
+                <button onclick="seekBackward()">-5초</button>
+                <button onclick="seekForward()">+5초</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>비디오 프레임 검색 시스템</h1>
+        
+        <div id="status" class="status-bar">
+            시스템 상태 확인 중...
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('video-upload')">비디오 업로드</button>
+            <button class="tab" onclick="showTab('image-search')" id="search-tab">이미지 검색</button>
+        </div>
+
+        <div id="video-upload" class="tab-content active">
+            <h2>비디오 프레임 추출</h2>
+            <div class="upload-area" id="video-drop-area">
+                <input type="file" id="videoInput" accept="video/*" style="display: none;">
+                <button class="btn" onclick="document.getElementById('videoInput').click()">비디오 선택</button>
+                <p>또는 여기에 비디오 파일을 끌어다 놓으세요</p>
+            </div>
+            <div class="progress-container" id="video-progress">
+                <div class="progress-bar">
+                    <div class="progress"></div>
+                </div>
+                <p id="progress-text">처리 중...</p>
+            </div>
+            <div id="video-status" class="success"></div>
+            <div id="video-error" class="error"></div>
+        </div>
+
+        <div id="image-search" class="tab-content">
+            <h2>이미지로 검색</h2>
+            <div class="search-container">
+                <div class="upload-area" id="image-drop-area">
+                    <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                    <button class="btn" onclick="document.getElementById('imageInput').click()">이미지 선택</button>
+                    <p>또는 여기에 이미지를 끌어다 놓으세요</p>
+                    <img id="preview" class="preview" style="display: none;">
+                </div>
+                <button id="searchButton" class="btn search-btn" disabled>검색 시작</button>
+            </div>
+            <div id="search-error" class="error"></div>
+            <div id="search-loading" class="loading">검색 중...</div>
+            <div id="results" class="results"></div>
+            <div id="image-status" class="success"></div>
+        </div>
+    </div>
+
+    <script>
+        // 시스템 상태 확인
+        async function checkSystemStatus() {
+            try {
+                const response = await fetch('/system-check');
+                const data = await response.json();
+                const statusDiv = document.getElementById('status');
+                const searchTab = document.getElementById('search-tab');
+                
+                if (data.status === 'ready') {
+                    statusDiv.style.backgroundColor = '#d4edda';
+                    statusDiv.style.color = '#155724';
+                    const videoStatus = await fetch('/video/status');
+                    const videoData = await videoStatus.json();
+                    statusDiv.innerHTML = `시스템 준비 완료: ${videoData.embeddings_in_db}개의 프레임 처리됨`;
+                    searchTab.disabled = false;
+                } else {
+                    statusDiv.style.backgroundColor = '#fff3cd';
+                    statusDiv.style.color = '#856404';
+                    statusDiv.innerHTML = data.message;
+                    searchTab.disabled = true;
+                }
+            } catch (error) {
+                document.getElementById('status').innerHTML = '시스템 상태 확인 실패';
+            }
+        }
+
+        // 탭 전환
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+            document.querySelector(`button[onclick*="${tabId}"]`).classList.add('active');
+        }
+
+        // 파일 업로드 영역 설정
+        function setupDropArea(areaId, inputId) {
+            const area = document.getElementById(areaId);
+            const input = document.getElementById(inputId);
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                area.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                area.addEventListener(eventName, () => area.classList.add('dragover'));
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                area.addEventListener(eventName, () => area.classList.remove('dragover'));
+            });
+
+            area.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                input.files = dt.files;
+                input.dispatchEvent(new Event('change'));
+            });
+        }
+
+        // 비디오 업로드 처리
+        document.getElementById('videoInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const progress = document.getElementById('video-progress');
+            const progressBar = progress.querySelector('.progress');
+            const progressText = document.getElementById('progress-text');
+            const error = document.getElementById('video-error');
+            const status = document.getElementById('video-status');
+
+            progress.style.display = 'block';
+            error.style.display = 'none';
+            status.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/video/process', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || '비디오 처리 중 오류가 발생했습니다.');
+                }
+
+                status.textContent = data.message;
+                status.style.display = 'block';
+                await checkSystemStatus();
+            } catch (err) {
+                error.textContent = err.message;
+                error.style.display = 'block';
+            } finally {
+                progress.style.display = 'none';
+            }
+        });
+
+        let selectedFile = null;
+
+        // 이미지 선택 처리
+        document.getElementById('imageInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const preview = document.getElementById('preview');
+            const searchButton = document.getElementById('searchButton');
+            const searchError = document.getElementById('search-error');
+            
+            // 이미지 파일 타입 검사
+            if (!file.type.startsWith('image/')) {
+                searchError.textContent = '이미지 파일만 선택 가능합니다.';
+                searchError.style.display = 'block';
+                preview.style.display = 'none';
+                searchButton.disabled = true;
+                return;
+            }
+
+            // 이미지 미리보기
+            preview.style.display = 'block';
+            preview.src = URL.createObjectURL(file);
+            selectedFile = file;
+            searchButton.disabled = false;
+            searchError.style.display = 'none';
+        });
+
+        // 검색 버튼 처리
+        document.getElementById('searchButton').addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            const loading = document.getElementById('search-loading');
+            const error = document.getElementById('search-error');
+            const results = document.getElementById('results');
+            const searchButton = document.getElementById('searchButton');
+
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            results.innerHTML = '';
+            searchButton.disabled = true;
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                // 시스템 상태 확인
+                const statusResponse = await fetch('/system-check');
+                const statusData = await statusResponse.json();
+                if (statusData.status !== 'ready') {
+                    throw new Error('검색 시스템이 준비되지 않았습니다. 먼저 비디오를 처리해주세요.');
+                }
+
+                const response = await fetch('/search/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || '검색 중 오류가 발생했습니다.');
+                }
+
+                const data = await response.json();
+                
+                if (data.results.length === 0) {
+                    results.innerHTML = '<p>검색 결과가 없습니다.</p>';
+                } else {
+                    // 유사도 순으로 정렬
+                    data.results.sort((a, b) => b.similarity_score - a.similarity_score);
+                    
+                    results.innerHTML = data.results.map(result => {
+                        return `
+                        <div class="result-item" onclick="showFrameInfo(${result.frame_index}, '${result.video_name}')">
+                            <img src="/video/frames/test/${result.frame_index}" 
+                                 alt="프레임 ${result.frame_index}" 
+                                 class="result-image"
+                                 onerror="this.src='data:image/svg+xml,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'200\\' height=\\'200\\'><rect width=\\'200\\' height=\\'200\\' fill=\\'%23ddd\\'/><text x=\\'50%\\' y=\\'50%\\' font-size=\\'16\\' text-anchor=\\'middle\\' fill=\\'%23666\\'>이미지 로드 실패</text></svg>'">
+                            <div class="similarity-score">${(result.similarity_score * 100).toFixed(1)}% 일치</div>
+                            <div class="metadata">
+                                <p>동영상: ${result.video_name}</p>
+                                <p>프레임: ${result.frame_index}</p>
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
+                }
+            } catch (err) {
+                error.textContent = err.message;
+                error.style.display = 'block';
+                results.innerHTML = '';
+            } finally {
+                loading.style.display = 'none';
+                searchButton.disabled = !selectedFile;  // 파일이 선택되어 있으면 버튼 다시 활성화
+            }
+        });
+
+        // 드래그 앤 드롭 설정
+        setupDropArea('video-drop-area', 'videoInput');
+        setupDropArea('image-drop-area', 'imageInput');
+
+        // 초기 시스템 상태 확인
+        checkSystemStatus();
+
+        // 주기적으로 시스템 상태 갱신
+        setInterval(checkSystemStatus, 10000);
+
+        // 현재 선택된 프레임 정보를 저장할 변수
+        let currentFrameIndex = 0;
+        
+        // 모달 관련 함수들
+        function showFrameInfo(frameIndex, videoName) {
+            const modal = document.getElementById('frameModal');
+            const frameInfo = document.getElementById('frameInfo');
+            const videoPlayer = document.getElementById('videoPlayer');
+            const videoSource = document.getElementById('videoSource');
+            
+            // 현재 프레임 인덱스 저장
+            currentFrameIndex = frameIndex;
+            
+            // 1fps로 추출했으므로 프레임 인덱스가 초와 동일
+            const seconds = frameIndex;
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            
+            // 시간 정보 포맷팅
+            const timeStr = `${minutes}분 ${remainingSeconds}초`;
+            
+            frameInfo.innerHTML = `
+                <p><strong>동영상:</strong> ${videoName}</p>
+                <p><strong>프레임 번호:</strong> ${frameIndex}</p>
+                <p><strong>영상 시간:</strong> ${timeStr}</p>
+            `;
+            
+            // 비디오 소스 설정
+            videoSource.src = `/video/stream/${videoName}`;
+            videoPlayer.load();
+            
+            // 비디오가 로드되면 해당 시간으로 이동
+            videoPlayer.onloadedmetadata = function() {
+                videoPlayer.currentTime = frameIndex;
+            };
+            
+            modal.style.display = 'block';
+        }
+        
+        function closeModal() {
+            const modal = document.getElementById('frameModal');
+            const videoPlayer = document.getElementById('videoPlayer');
+            videoPlayer.pause();
+            modal.style.display = 'none';
+        }
+        
+        // 비디오 컨트롤 함수들
+        function jumpToFrame() {
+            const videoPlayer = document.getElementById('videoPlayer');
+            videoPlayer.currentTime = currentFrameIndex;
+        }
+        
+        function seekForward() {
+            const videoPlayer = document.getElementById('videoPlayer');
+            videoPlayer.currentTime = Math.min(videoPlayer.duration, videoPlayer.currentTime + 5);
+        }
+        
+        function seekBackward() {
+            const videoPlayer = document.getElementById('videoPlayer');
+            videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 5);
+        }
+        
+        // 모달 외부 클릭 시 닫기
+        window.onclick = function(event) {
+            const modal = document.getElementById('frameModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        // ESC 키로 모달 닫기
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const modal = document.getElementById('frameModal');
+                modal.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
